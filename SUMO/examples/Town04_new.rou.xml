@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-10-23 12:56:59.399007 by randomTrips.py v1_24_0+0000-b72eb3fabc8
+<configuration>
+    <net-file value="C:\Users\Adithya\Downloads\CARLA_0.9.16\Co-Simulation\Sumo\examples\Town04.net.xml"/>
+    <output-trip-file value="C:\Users\Adithya\Downloads\CARLA_0.9.16\Co-Simulation\Sumo\examples\Town04_new.rou.xml"/>
+    <length value="True"/>
+    <end value="50.0"/>
+</configuration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <trip id="0" depart="0.00" from="34" to="-15"/>
+    <trip id="1" depart="1.00" from="-40" to="-36"/>
+    <trip id="2" depart="2.00" from="39" to="35"/>
+    <trip id="3" depart="3.00" from="46" to="-22"/>
+    <trip id="4" depart="4.00" from="-47" to="-16"/>
+    <trip id="5" depart="5.00" from="-36" to="-7"/>
+    <trip id="6" depart="6.00" from="-16" to="-35"/>
+    <trip id="7" depart="7.00" from="34" to="16"/>
+    <trip id="8" depart="8.00" from="-36" to="29"/>
+    <trip id="9" depart="9.00" from="44" to="-1"/>
+    <trip id="10" depart="10.00" from="44" to="37"/>
+    <trip id="11" depart="11.00" from="-45" to="-25"/>
+    <trip id="12" depart="12.00" from="51" to="-45"/>
+    <trip id="13" depart="13.00" from="-22" to="-22"/>
+    <trip id="14" depart="14.00" from="45" to="31"/>
+    <trip id="15" depart="15.00" from="44" to="39"/>
+    <trip id="16" depart="16.00" from="11" to="52"/>
+    <trip id="17" depart="17.00" from="-45" to="17"/>
+    <trip id="18" depart="18.00" from="45" to="32"/>
+    <trip id="19" depart="19.00" from="45" to="25"/>
+    <trip id="20" depart="20.00" from="38" to="-19"/>
+    <trip id="21" depart="21.00" from="-37" to="-40"/>
+    <trip id="22" depart="22.00" from="-22" to="-38"/>
+    <trip id="23" depart="23.00" from="-23" to="-40"/>
+    <trip id="24" depart="24.00" from="33" to="-45"/>
+    <trip id="25" depart="25.00" from="-45" to="-35"/>
+    <trip id="26" depart="26.00" from="-39" to="50"/>
+    <trip id="27" depart="27.00" from="34" to="31"/>
+    <trip id="28" depart="28.00" from="-29" to="38"/>
+    <trip id="29" depart="29.00" from="-26" to="-45"/>
+    <trip id="30" depart="30.00" from="7" to="34"/>
+    <trip id="31" depart="31.00" from="18" to="35"/>
+    <trip id="32" depart="32.00" from="45" to="41"/>
+    <trip id="33" depart="33.00" from="-38" to="-17"/>
+    <trip id="34" depart="34.00" from="-41" to="-39"/>
+    <trip id="35" depart="35.00" from="-35" to="50"/>
+    <trip id="36" depart="36.00" from="45" to="-41"/>
+    <trip id="37" depart="37.00" from="34" to="-46"/>
+    <trip id="38" depart="38.00" from="49" to="-50"/>
+    <trip id="39" depart="39.00" from="-39" to="-38"/>
+    <trip id="40" depart="40.00" from="19" to="-39"/>
+    <trip id="41" depart="41.00" from="27" to="47"/>
+    <trip id="42" depart="42.00" from="-46" to="-36"/>
+    <trip id="43" depart="43.00" from="9" to="-8"/>
+    <trip id="44" depart="44.00" from="-22" to="-19"/>
+    <trip id="45" depart="45.00" from="-23" to="33"/>
+    <trip id="46" depart="46.00" from="41" to="-47"/>
+    <trip id="47" depart="47.00" from="-22" to="-45"/>
+    <trip id="48" depart="48.00" from="9" to="1"/>
+    <trip id="49" depart="49.00" from="52" to="45"/>
+</routes>

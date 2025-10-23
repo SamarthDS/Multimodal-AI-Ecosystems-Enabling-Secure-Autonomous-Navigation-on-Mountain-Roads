@@ -2,7 +2,7 @@
 
 ## 📘 Project Overview
 
-This project(The Tofu-Delivery Protocol) presents a **co-simulation framework integrating [CARLA](https://carla.org/) and [SUMO](https://sumo.dlr.de/docs/index.html)** to investigate **Vehicle-to-Vehicle (V2V) communication strategies** for improving road safety in **mountainous terrains**.  
+This project (The Tofu-Delivery Protocol) presents a **co-simulation framework integrating [CARLA](https://carla.org/) and [SUMO](https://sumo.dlr.de/docs/index.html)** to investigate **Vehicle-to-Vehicle (V2V) communication strategies** for improving road safety in **mountainous terrains**.  
 
 The primary research gap addressed is the **inadequacy of conventional collision avoidance systems** under challenging conditions such as:
 - Sharp curves  

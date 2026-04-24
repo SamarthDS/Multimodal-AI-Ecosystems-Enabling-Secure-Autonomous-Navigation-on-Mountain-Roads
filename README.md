@@ -1,185 +1,321 @@
-# 🏔️ Multimodal AI Ecosystems: Enabling Secure Autonomous Navigation on Mountain Roads
+# BeamNG V2V Collision Avoidance
 
-## 📘 Project Overview
+> A Python-based Vehicle-to-Vehicle (V2V) communication system that demonstrates **cooperative collision avoidance** and **kinetic-energy-based right-of-way negotiation** inside the [BeamNG.drive](https://www.beamng.com/) soft-body physics simulator.
 
-This project (The Tofu-Delivery Protocol) presents a **co-simulation framework integrating [CARLA](https://carla.org/) and [SUMO](https://sumo.dlr.de/docs/index.html)** to investigate **Vehicle-to-Vehicle (V2V) communication strategies** for improving road safety in **mountainous terrains**.  
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
+![Python](https://img.shields.io/badge/python-3.8%2B-green)
+![Simulator](https://img.shields.io/badge/BeamNG.drive-1.28%2B-orange)
+![Status](https://img.shields.io/badge/status-research--prototype-yellow)
 
-The primary research gap addressed is the **inadequacy of conventional collision avoidance systems** under challenging conditions such as:
-- Sharp curves  
-- Limited visibility  
-- Unreliable connectivity  
-
-These are typical of **elevated or hilly roads**, especially in **left-hand traffic regions like India**.  
-
-The project aims to:
-- Generate a **high-fidelity multimodal dataset** capturing **critical V2V interaction scenarios** — specifically **blind hairpin encounters**.  
-- Facilitate the development and testing of **AI-driven V2V communication protocols** and **cooperative decision-making algorithms** to **mitigate collision risks** in mountainous environments.
+Two AI-controlled vehicles approach each other head-on on a single-lane road. They exchange telemetry over a TCP socket, compute a time-to-collision, and deterministically decide which car yields and which passes — without any human input. A real-time dashboard visualises the handshake while a metrics logger captures reaction time, latency, and clearance for research-grade analysis.
 
 ---
 
-## ⚙️ Simulation Environment Configuration
+## Table of Contents
 
-### 🧩 Software Requirements
-
-| Component | Version | Purpose |
-|------------|----------|----------|
-| **CARLA Simulator** | 0.9.16 | High-fidelity 3D driving simulation |
-| **SUMO** | Latest stable | Microscopic traffic simulation and routing |
-| **Python** | 3.12.x | Primary scripting and bridge control |
-| **CARLA Co-Simulation Bridge** | Included in CARLA 0.9.16 | Synchronization between CARLA & SUMO |
+1. [Key Features](#key-features)
+2. [System Architecture](#system-architecture)
+3. [Quick Start](#quick-start)
+4. [Project Structure](#project-structure)
+5. [How It Works](#how-it-works)
+6. [Documentation](#documentation)
+7. [Results](#results)
+8. [Known Limitations](#known-limitations)
+9. [Future Work](#future-work)
+10. [Citation](#citation)
+11. [Acknowledgments](#acknowledgments)
 
 ---
 
-## 🏗️ Setup Procedure
+## Key Features
 
-### 1. Install CARLA
-Download and extract **CARLA 0.9.16** for your operating system.
+- **TCP Socket V2V Link** — Persistent `127.0.0.1:5555` channel with JSON-encoded telemetry, warnings, and yield/pass commands.
+- **Kinetic-Energy Right-of-Way Negotiation** — The slower vehicle (lower kinetic energy → shorter stopping distance) yields; a deterministic vehicle-ID tie-breaker eliminates deadlocks.
+- **Three-Zone Distance Logic** — Warning (30 m) → Slow (20 m) → Stop (10 m), with a 3 m emergency-brake fallback.
+- **Real-Time Tkinter Dashboard** — Live distance, per-vehicle status/speed, and timestamped V2V message log.
+- **Automated Metrics Pipeline** — Per-run CSVs capture 18+ metrics (TTC, reaction time, stopping distance, latency, MDR). A report generator emits LaTeX-ready tables and Markdown summaries.
+- **Indian Left-Lane Driving Norms** — AI pathing explicitly enforces left-lane adherence for culturally-accurate scenarios.
+- **Multi-Run Support** — Execute consecutive runs from a single BeamNG session; metrics auto-aggregate across runs.
 
-### 2. Install Python 3.12.x
-Ensure Python is globally accessible (e.g., `py -3.12`).
+---
 
-### 3. Configure Python Virtual Environment
-```bash
-# Create and activate virtual environment
-py -3.12 -m venv carla_py312_env
-.\carla_py312_env\Scripts\activate
+## System Architecture
 
-# Install CARLA client and dependencies
-pip install "path/to/carla-0.9.16-cp312-cp312-win_amd64.whl"
-pip install numpy pandas matplotlib
 ```
-### 4. Install SUMO
+                        ┌────────────────────────────────────┐
+                        │        BeamNG.drive Engine         │
+                        │  (Soft-body physics + AI pathing)  │
+                        └───────────▲──────────────▲─────────┘
+                                    │ beamngpy     │ beamngpy
+                                    │ (RPC)        │ (RPC)
+              ┌─────────────────────┴─┐          ┌─┴──────────────────────┐
+              │        car_a.py       │          │        car_b.py        │
+              │    (V2V SERVER)       │          │     (V2V CLIENT)       │
+              │  - Spawns/attaches    │          │  - Attaches to BeamNG  │
+              │  - Drives Car A (AI)  │          │  - Drives Car B (AI)   │
+              │  - Launches GUI       │          │  - Listener thread     │
+              │  - Logs metrics       │          │  - Logs metrics        │
+              └──────────▲────────────┘          └───────────▲────────────┘
+                         │                                   │
+                         │     TCP Socket 127.0.0.1:5555     │
+                         │     JSON messages @ ~20 Hz        │
+                         └──────────────┬────────────────────┘
+                                        │
+                         HELLO │ START_RUN │ POSITION │ WARNING │
+                            YIELDING │ PROCEED │ SLOW
+```
 
-1. **Download and install** the latest stable release of [SUMO](https://sumo.dlr.de/docs/Downloads.php).  
-2. During setup, select the option **“Add SUMO to PATH”**.  
-3. Verify the installation using:
-   ```bash
-   sumo --version
-   ```
-### 5. Prepare Map Network for Co-Simulation
-
-Use **netconvert** to convert the CARLA map (Town04) to SUMO’s **.net.xml** format:
-   ```bash
-   netconvert --opendrive "path/to/Town04.xodr" --lefthand \
--o "path/to/Town04.net.xml"
-   ```
-
-### 6. Generate SUMO Route File
-
-Navigate to the SUMO tools directory and create a compatible route file:
-  ```bash
-  cd YOUR_SUMO_INSTALL_DIR/tools
-python randomTrips.py \
-  -n "path/to/Town04.net.xml" \
-  -o "path/to/Town04_generated.rou.xml" \
-  -e 50 -l
- ```
-
-### 7. Configure SUMO Scenario
-
-Edit the **Town04.sumocfg** file to reference the correct network and route files:
-
-   ```xml
-   <input>
-    <net-file value="Town04.net.xml"/>
-    <route-files value="carlavtypes.rou.xml,Town04_generated.rou.xml"/>
-   </input>
-   ```
-### 8. Modify Co-Simulation Bridge
-
-Open **run_synchronization.py** and make the following modifications:
-
-🧩 Comment out the block that forces CARLA into synchronous mode.
-
-🧩 Remove any **client.load_world()** calls to avoid conflicts with manual map loading.
-
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full component breakdown, threading model, and state machine.
 
 ---
 
-## 🚀 Execution Protocol
+## Quick Start
 
-  ## 1. Start CARLA Server
+### Prerequisites
 
-  ```bash
-  ./CarlaUE4.exe -map=Town04 -quality-level=Low -ResX=800 -ResY=600
-  ```
+| Requirement | Details |
+|---|---|
+| OS | Windows 10 / 11 (uses `msvcrt` for non-blocking keyboard input) |
+| Python | 3.8+ |
+| BeamNG.drive | Installed via Steam — note the path (e.g. `X:\Steam\steamapps\common\BeamNG.drive`) |
 
-  ## 2. Run Co-Simulation Bridge
+### Installation
 
-  ```bash
-  # Activate environment
-  .\carla_py312_env\Scripts\activate
+```powershell
+# 1. Clone and enter the project
+git clone <your-repo-url>
+cd MAJOR-PROJECT
 
-  # Navigate to bridge directory
-  cd path/to/CARLA_0.9.16/Co-Simulation/Sumo
+# 2. Create and activate a virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
-  # Run synchronized simulation
-  python run_synchronization.py examples/Town04.sumocfg --sumo-gui
-  ```
+# 3. Install dependencies
+pip install -r requirements.txt
+```
+
+### Configure BeamNG Path
+
+In **both** [car_a.py](car_a.py#L21) and [car_b.py](car_b.py#L20), set:
+
+```python
+BNG_HOME = r"X:\Steam\steamapps\common\BeamNG.drive"   # ← Your install path
+```
+
+### Run
+
+**Terminal 1 — Start Car A (server + BeamNG launcher):**
+```powershell
+python car_a.py
+```
+Spawn two vehicles on opposite ends of a road, then select Car A by index.
+
+**Terminal 2 — Start Car B (client):**
+```powershell
+python car_b.py
+```
+Select Car B (the vehicle that is **not** currently Blue).
+
+**Execute a run:** In Car A's terminal, enter a base speed (default 45 km/h) and press ENTER. The GUI launches and the vehicles autonomously negotiate the pass.
+
+**Generate the aggregate report (after one or more runs):**
+```powershell
+python results/generate_report.py
+```
+
+See [SETUP.md](SETUP.md) for the full setup walkthrough and troubleshooting.
 
 ---
 
-## ✅ Current System Status
+## Project Structure
 
-- ✔️ Stable co-simulation between CARLA 0.9.16 and SUMO
-
-- ✔️ Town04 environment loaded in both simulators
-
-- ✔️ Left-hand traffic correctly simulated
-
-- ✔️ Vehicles synchronized and visualized across both systems
-
+```
+MAJOR-PROJECT/
+├── car_a.py                   # V2V server — manages BeamNG + drives Car A
+├── car_b.py                   # V2V client — connects to Car A + drives Car B
+├── v2v_gui.py                 # Tkinter dashboard (distance, status, speeds, log)
+├── v2v_metrics.py             # MetricsCollector — events, CSV logging, summaries
+├── requirements.txt           # Python dependencies (beamngpy ≥ 1.28)
+│
+├── README.md                  # ← this file
+├── SETUP.md                   # Setup + troubleshooting
+├── MATHEMATICAL_MODEL.md      # Full math: TTC, KE, zones, latency, MDR, CAR
+├── FEATURE_ANALYSIS.md        # Inventory of 49 features (30 ✅ / 19 ❌) + reasoning
+├── presentation_script.md     # 4-speaker presentation script
+│
+├── docs/
+│   ├── ARCHITECTURE.md        # System design, threading, state machine
+│   ├── PROTOCOL.md            # V2V message schemas + sequence diagrams
+│   ├── API_REFERENCE.md       # Python module/class/function reference
+│   └── EXPERIMENTAL_METHODOLOGY.md  # Test protocol, metric definitions
+│
+└── results/
+    ├── generate_report.py          # Aggregates CSV → Markdown + LaTeX
+    ├── v2v_results.csv             # Car A per-run metrics (auto-generated)
+    ├── v2v_results_car_b.csv       # Car B per-run metrics (auto-generated)
+    ├── experiment_results.md       # Aggregate Markdown summary (auto-generated)
+    └── v2v_metrics_table.tex       # Aggregate LaTeX table (auto-generated)
+```
 
 ---
 
-## 🧭 Future Work
+## How It Works
 
-### 1. Scenario Definition
+### 1. Connection phase
+- `car_a.py` binds a TCP server on `127.0.0.1:5555` and waits.
+- `car_b.py` connects and transmits a `HELLO` message with its vehicle ID.
+- Both scripts attach to the running BeamNG.drive instance via `beamngpy`.
 
-- Create custom route files (.rou.xml) for two-vehicle blind hairpin encounters.
+### 2. Driving phase
+- Both cars are placed in AI `chase` mode targeting each other, constrained to the left lane (`ai.driveInLane("on")`).
+- Position and velocity are exchanged at ~20 Hz over the socket.
 
-- Identify and map relevant edge sequences from Town04.net.xml.
+### 3. Negotiation phase
+- When inter-vehicle distance `d < 30 m`, Car A broadcasts a `WARNING` message; both cars drop to the safe passing speed (20 km/h).
+- At `d < 35 m`, the **kinetic-energy tie-breaker** fires:
+  - `KE_i = ½ m_i s_i²` → the **slower** car has less energy and yields.
+  - Ties broken by lexicographic comparison of vehicle IDs.
+- The yielder sends `YIELDING` and switches to AI `stop` mode. The passer sends `PROCEED` and switches to AI `random` mode at 20 km/h.
 
-### 2. Protagonist Vehicle Integration
+### 4. Completion phase
+- Once `d > d_min + 1.0 m` **AND** `d > 10.0 m`, the pass is considered complete.
+- Both cars accelerate back to base speed, metrics are saved to CSV, and the system is ready for the next run.
 
-- Modify co-simulation bridge to allow CARLA-controlled protagonist vehicles.
+### 5. Emergency fallback
+- If negotiation fails and `d < 3 m`, Car A applies `brake=1.0, parkingbrake=1.0` as a last-resort.
+- A collision is flagged when `d_min < 1.0 m` (for the Collision Avoidance Rate statistic).
 
-- Attach multimodal sensors:
+See [MATHEMATICAL_MODEL.md](MATHEMATICAL_MODEL.md) for all equations and thresholds.
 
-  - LiDAR
+---
 
-  - Radar
+## Documentation
 
-  - Camera
+| Document | What it covers |
+|---|---|
+| [SETUP.md](SETUP.md) | Prerequisites, venv, BeamNG path, first run, troubleshooting |
+| [MATHEMATICAL_MODEL.md](MATHEMATICAL_MODEL.md) | Vehicle state vectors, distance zones, TTC, KE-based yield rule, latency, MDR, CAR |
+| [FEATURE_ANALYSIS.md](FEATURE_ANALYSIS.md) | 49-feature inventory — what's implemented, what isn't, and why |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, data flow, threading, state machine |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | JSON message schemas, sequence diagrams, error handling |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | `MetricsCollector`, `V2VDashboard`, entry-point modules |
+| [docs/EXPERIMENTAL_METHODOLOGY.md](docs/EXPERIMENTAL_METHODOLOGY.md) | Test procedure, controlled variables, metric definitions |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute, code style, testing |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
-  - GPS
+---
 
-  - IMU
+## Results
 
-### 3. Dataset Generation
+Per-run metrics auto-logged to `results/v2v_results.csv` (Car A) and `results/v2v_results_car_b.csv` (Car B). After running `python results/generate_report.py`, aggregate statistics are emitted to both Markdown and LaTeX.
 
-- Run multiple simulations with varying:
+Representative metrics captured per run:
 
-  - Traffic density
+| Metric | Unit | Source |
+|---|---|---|
+| Warning Trigger Distance | m | Distance at which `WARNING` was sent |
+| Braking Reaction Time | ms | `t_brake − t_warn` via `time.perf_counter()` |
+| Stopping Distance | m | Euclidean distance from brake-apply position to full-stop position |
+| Time-to-Collision at Warning | s | `d / (s_A + s_B)` at warning instant |
+| Minimum Inter-Vehicle Distance | m | Closest approach during the manoeuvre |
+| Collision Avoidance Rate | % | `(R − C) / R × 100`, where C = runs with `d_min < 1 m` |
+| V2V Message Latency | ms | Mean of `(t_recv − send_ts)` across received messages |
+| Message Delivery Rate | % | `received / max(sent, received) × 100` |
+| Position Update Frequency | Hz | `N_updates / Δt_elapsed` |
 
-  - Environmental conditions
+See [docs/EXPERIMENTAL_METHODOLOGY.md](docs/EXPERIMENTAL_METHODOLOGY.md) for the full experimental protocol.
 
-- Generate multimodal datasets for AI model training.
+---
 
-### 4. Data Post-Processing & Analysis
+## Known Limitations
 
-- Use Python (NumPy, Pandas, Matplotlib) to analyze:
+The project is a **research prototype**, not a production V2V stack. Key limitations (documented in full in [FEATURE_ANALYSIS.md](FEATURE_ANALYSIS.md)):
 
-  - Simulation integrity
+- **Software-only communication.** Uses TCP over `localhost` — not DSRC (IEEE 802.11p) or C-V2X. No wireless channel modelling (fading, interference, packet loss).
+- **No standardised message format.** Uses custom JSON, not SAE J2735 BSMs (Basic Safety Messages).
+- **No security layer.** Plaintext JSON, no PKI / SCMS / certificate management.
+- **Ground-truth positioning.** Coordinates come from BeamNG's simulation state (zero GPS noise).
+- **Single-scenario.** Head-on, single-lane, two-vehicle only. No intersections, roundabouts, or multi-lane merging.
+- **Windows-only.** `msvcrt` is used for non-blocking keyboard input in `car_a.py`.
+- **No 3D/map visualisation.** The GUI is a 2D status panel.
 
-  - Minimum inter-vehicle distance
+Three major scope reductions — hill-road map import, 8–12 car traffic, and BeamNG.tech sensor suite — are explained in detail in the original [README.md (Issues and Constraints)](#issues-and-constraints) section and in [FEATURE_ANALYSIS.md](FEATURE_ANALYSIS.md).
 
-  - Time-to-collision (TTC)
+---
 
-- Simulate V2V message propagation:
+## Future Work
 
-  - Latency
+Natural extensions, ordered by effort:
 
-  - Range limitations
+1. **Port the non-blocking input** in `car_a.py` to a cross-platform library (e.g. `prompt_toolkit`) to remove the Windows dependency.
+2. **Add a replay mode** that re-drives saved CSV runs for deterministic regression testing.
+3. **Integrate a wireless channel model** (log-distance path loss + Rayleigh fading) as a delay/drop stage in front of the socket.
+4. **Implement SAE J2735 BSMs** with ASN.1 encoding (e.g. `asn1tools`) for real-standard-compliant messaging.
+5. **Extend to intersection scenarios** with a V2I virtual RSU that broadcasts signal-phase-and-timing (SPaT) messages.
+6. **Couple with SUMO + NS-3** for large-scale traffic + realistic radio propagation.
 
-  - Packet loss
+---
+
+## Citation
+
+If this project informs academic work, please cite:
+
+```bibtex
+@misc{beamng_v2v_collision_avoidance,
+  title   = {BeamNG V2V Collision Avoidance: A Kinetic-Energy-Based
+             Cooperative Right-of-Way Negotiation System},
+  author  = {Anand, Adithya and contributors},
+  year    = {2026},
+  note    = {Major Project — Vehicle-to-Vehicle Communication},
+  howpublished = {\url{https://github.com/<your-org>/<your-repo>}}
+}
+```
+
+---
+
+## Acknowledgments
+
+- **[BeamNG GmbH](https://www.beamng.com/)** — for the BeamNG.drive soft-body physics simulator.
+- **[beamngpy](https://github.com/BeamNG/BeamNGpy)** — the Python API that makes the scripted vehicle control possible.
+- **Catppuccin** — dashboard colour palette.
+
+---
+
+## Issues and Constraints
+
+During development, several ambitious extensions were explored but ultimately had to be set aside due to technical, licensing, and engine-level constraints.
+
+### 1. Importing Real-World Hill-Road Maps
+
+We initially planned to recreate real Indian hill-road environments (e.g., Himalayan ghat roads) inside BeamNG to test V2V negotiation on narrow, winding mountain terrain.
+
+**Why it was abandoned:**
+
+- **Heightmap format restrictions.** BeamNG's Torque3D engine requires terrain heightmaps to be 16-bit grayscale PNGs with power-of-2 square dimensions (e.g., 2048×2048 or 4096×4096). Most publicly available DEM (Digital Elevation Model) data from sources like USGS SRTM or Bhuvan comes in GeoTIFF or HGT formats at non-square, non-power-of-2 resolutions, requiring extensive re-projection and resampling that degrades vertical accuracy.
+- **Texture and material licensing.** Realistic road surfaces, guardrails, cliff textures, and vegetation assets for Indian mountain roads are not included in BeamNG's default asset library. Sourcing these would require licenses from commercial terrain-asset providers (e.g., Quixel, Poliigon) or satellite imagery providers, which were outside the project's academic budget.
+- **No collision on tiled terrain.** BeamNG supports tiling multiple heightmap blocks for larger map areas, but the physics engine does not simulate vehicle collisions on the additional tiles — only the primary terrain block has full collision support. This made it impossible to build a continuous hill-road stretch longer than ~4 km at usable detail.
+- **World Editor instability.** Heightmaps above 4096×4096 caused persistent crashes and excessive memory usage in the BeamNG World Editor, making iterative road-layout editing impractical.
+
+### 2. Multi-Vehicle Traffic Simulation
+
+The second goal was to extend the V2V scenario to a multi-car traffic environment — spawning 8–12 AI-controlled vehicles on the same road and testing cooperative collision avoidance in congested conditions.
+
+**Why it was abandoned:**
+
+- **AI behaviour unpredictability.** When we assigned individual AI modes (e.g., `chase`, `random`) to multiple vehicles through `beamngpy`, vehicles frequently ignored lane constraints, drifted off-road, or collided with each other in ways unrelated to our V2V logic — making controlled experiments unrepeatable.
+- **No programmatic traffic-law enforcement.** BeamNG does not enforce traffic laws on AI traffic, so our custom socket-based negotiation was constantly overridden by the engine's internal AI pathing.
+- **CPU and physics bottleneck.** Spawning more than 5–6 soft-body vehicles dropped the simulation below real-time (< 1× factor), introducing artificial latency that invalidated timing-sensitive metrics.
+- **No automatic traffic generation API.** `beamngpy` lacked a dedicated API for reproducibly spawning and managing traffic fleets at the time of development.
+
+### 3. BeamNG.tech (Research-Licensed Version)
+
+We obtained an academic research license for BeamNG.tech for its advanced sensor suite — simulated LiDAR, RADAR, camera with instance annotations, IMU, GPS.
+
+**Why we reverted to BeamNG.drive:**
+
+- **Map rendering and terrain glitches.** Stock maps that worked flawlessly in BeamNG.drive exhibited floating road segments, missing terrain, and inconsistent surface normals in BeamNG.tech.
+- **Physics timestep mismatch.** Altering the base simulation frequency (required to synchronise sensor sampling) changed tire grip and suspension response, making BeamNG.tech braking-distance measurements incomparable to our BeamNG.drive baseline.
+- **Sensor integration complexity.** LiDAR point-cloud export and camera ground-truth annotation required a separate data pipeline beyond the project timeline.
+- **API incompatibilities.** The `beamngpy` version compatible with our BeamNG.tech build had breaking changes in vehicle control, sensor polling, and scenario APIs.
+
+Given these compounding issues, we made the pragmatic decision to continue on the consumer BeamNG.drive edition, where the environment was stable, reproducible, and sufficient for demonstrating the core V2V collision avoidance protocol.

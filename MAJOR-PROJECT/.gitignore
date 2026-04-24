@@ -1,0 +1,85 @@
+# ==========================================
+# Python
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==========================================
+# Virtual environments
+# ==========================================
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# ==========================================
+# IDEs / editors
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Jupyter
+# ==========================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ==========================================
+# Test / coverage artifacts
+# ==========================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ==========================================
+# Type checkers / linters
+# ==========================================
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# ==========================================
+# Project-specific — experimental output
+# ==========================================
+# These are auto-generated from test runs; exclude from version control.
+# Comment these out if you want to commit a reference dataset alongside the code.
+results/v2v_results.csv
+results/v2v_results_car_b.csv
+results/experiment_results.md
+results/v2v_metrics_table.tex
+
+# ==========================================
+# BeamNG / sim junk
+# ==========================================
+*.log
+beamng_*.log
+crash_*.txt
+
+# ==========================================
+# OS / misc
+# ==========================================
+*.bak
+*.tmp
+*.orig
